@@ -25,17 +25,17 @@ async function getItems(page) {
     return result;
 }
 async function extract(url, page) {
-    const result = [];
+    const finalresult = [];
     await page.goto(url);
     let pageNo = 1;
     while (true) {
         const items = await getItems(page);
-        result.push(...items);
+        finalresult.push(...items);
         const check = await page.evaluate(() => {
             return document.getElementsByClassName('pagination-next disabled').length;
         });
-        if (pageNo > 3 || check === 1) {
-            return result;
+        if (pageNo > 2 || check === 1) {
+            return finalresult;
         }
         await Promise.all([
             page.click('span.pagination-next > a > ruler-svg-icon-next'),

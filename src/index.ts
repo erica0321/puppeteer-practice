@@ -37,14 +37,14 @@ async function getItems(page: Page): Promise<ItemList> {
 }
 
 async function extract(url: string, page: Page): Promise<ItemList> {
-  const result: ItemList = []
+  const finalresult: ItemList = []
 
   await page.goto(url)
   let pageNo = 1
 
   while (true) {
     const items = await getItems(page)
-    result.push(...items)
+    finalresult.push(...items)
 
     const check = await page.evaluate(() => {
       return document.getElementsByClassName('pagination-next disabled').length
@@ -52,13 +52,14 @@ async function extract(url: string, page: Page): Promise<ItemList> {
 
     // console.log(check)
     if (pageNo > 3 || check === 1) {
-      return result
+      return finalresult
     }
 
     await Promise.all([
       page.click('span.pagination-next > a > ruler-svg-icon-next'),
       page.waitForTimeout(1000),
     ])
+
     console.log('다음페이지')
 
     pageNo += 1
