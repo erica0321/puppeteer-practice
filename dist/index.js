@@ -15,8 +15,11 @@ async function getItems(page) {
             const brandName = el.children[0].textContent;
             const itemName = el.children[1].children[0].innerHTML;
             const price = el.children[1].children[1].children[0].children[0].innerHTML;
-            const item = { brandName, itemName, price };
-            items.push(item);
+            items.push({
+                brandName,
+                itemName,
+                price
+            });
         });
         return items;
     });

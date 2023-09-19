@@ -1,42 +1,29 @@
 import puppeteer, { Page } from 'puppeteer'
 import type { Item, ItemList } from './types'
+;(async () => {
+  const browser = await puppeteer.launch({ headless: false })
+  const page = await browser.newPage()
 
-  ; (async () => {
-    const browser = await puppeteer.launch({ headless: false })
-    const page = await browser.newPage()
+  const url = 'https://search.29cm.co.kr/?keyword=%EC%9A%B0%EC%82%B0&page=1'
 
-    const url = 'https://search.29cm.co.kr/?keyword=%EC%9A%B0%EC%82%B0&page=1'
+  const result: ItemList = await extract(url, page)
 
-    const result: ItemList = await extract(url, page)
+  console.log(JSON.stringify(result))
+  // console.log(`아이템 수 ${result.length}`)
 
-    console.log(JSON.stringify(result))
-    // console.log(`아이템 수 ${result.length}`)
-
-    await browser.close()
-  })()
+  await browser.close()
+})()
 
 //한페이지내 item 리스트 반환
 async function getItems(page: Page) {
-  const result: Item[] = await page.evaluate(() => {
-    const items: Item[] = []
-    const list = document.querySelectorAll('.item_info')
-
-    list.forEach(el => {
-      const brandName = el.children[0].textContent
-      const itemName = el.children[1].children[0].innerHTML
-      const price = el.children[1].children[1].children[0].children[0].innerHTML
-
-      items.push({
-        brandName,
-        itemName,
-        price
-      })
-    })
-    return items
+  return await page.$$eval('.list_item', async listItem => {
+    return listItem.map(item => ({
+      brandName: item.querySelector('a.info_brand').textContent.trim(),
+      itemName: item.querySelector('a.info_desc > strong').textContent.trim(),
+      price: item.querySelector('span.num').textContent.trim(),
+    }))
   })
-
   // console.log(`개수: ${result.length}`)
-  return result
 }
 
 async function extract(url: string, page: Page) {
@@ -60,7 +47,7 @@ async function extract(url: string, page: Page) {
 
     await Promise.all([
       page.click('span.pagination-next > a > ruler-svg-icon-next'),
-      sleep(1000)
+      sleep(1000),
     ])
     // console.log('다음페이지')
 
