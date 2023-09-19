@@ -2,36 +2,47 @@ import puppeteer from 'puppeteer';
 (async () => {
     const browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
-    const url = 'https://search.29cm.co.kr/?keyword=%EC%9A%B0%EC%82%B0';
+    const url = 'https://search.29cm.co.kr/?keyword=%EC%9A%B0%EC%82%B0&page=1';
     const result = await extract(url, page);
     console.log(result);
     console.log(`아이템 수 ${result.length}`);
     await browser.close();
 })();
 async function getItems(page) {
-    const items = [];
-    const pageItemNum = await page.$$eval('.list_item ', data => data.length);
-    for (let itemNo = 1; itemNo <= pageItemNum; itemNo++) {
-        const root = `div.productContent_list > ruler-list-item:nth-child(${itemNo})`;
-        const brandNameSelector = await page.waitForSelector(`${root} a.info_brand`);
-        const brandName = await brandNameSelector?.evaluate(data => data.textContent);
-        const itemNameSelector = await page.waitForSelector(`${root} a.info_desc > strong`);
-        const itemName = await itemNameSelector?.evaluate(data => data.textContent);
-        const priceSelector = await page.waitForSelector(`${root} span.num`);
-        const price = await priceSelector?.evaluate(data => data.textContent);
-        const item = { brandName, itemName, price };
-        items.push(item);
-    }
-    return items;
+    const result = await page.evaluate(() => {
+        const items = [];
+        const list = document.querySelectorAll('.item_info');
+        list.forEach(el => {
+            const brandName = el.children[0].innerHTML;
+            const itemName = el.children[1].children[0].innerHTML;
+            const price = el.children[1].children[1].children[0].children[0].innerHTML;
+            const item = { brandName, itemName, price };
+            items.push(item);
+        });
+        return items;
+    });
+    console.log(`개수: ${result.length}`);
+    return result;
 }
 async function extract(url, page) {
     const result = [];
-    for (let pageNo = 1; pageNo <= 3; pageNo++) {
-        await page.goto(`https://search.29cm.co.kr/?keyword=%EC%9A%B0%EC%82%B0&page=${pageNo}`);
-        await page.waitForTimeout(1000);
+    await page.goto(url);
+    let pageNo = 1;
+    while (true) {
         const items = await getItems(page);
         result.push(...items);
+        const check = await page.evaluate(() => {
+            return document.getElementsByClassName('pagination-next disabled').length;
+        });
+        if (pageNo > 3 || check === 1) {
+            return result;
+        }
+        await Promise.all([
+            page.click('span.pagination-next > a > ruler-svg-icon-next'),
+            page.waitForTimeout(1000),
+        ]);
+        console.log('다음페이지');
+        pageNo += 1;
     }
-    return result;
 }
 //# sourceMappingURL=index.js.map

@@ -1,10 +1,11 @@
 import puppeteer, { Page } from 'puppeteer'
 import type { Item, ItemList } from './types'
+import { next } from 'cheerio/lib/api/traversing'
 ;(async () => {
   const browser = await puppeteer.launch({ headless: false })
   const page = await browser.newPage()
 
-  const url = 'https://search.29cm.co.kr/?keyword=%EC%9A%B0%EC%82%B0'
+  const url = 'https://search.29cm.co.kr/?keyword=%EC%9A%B0%EC%82%B0&page=1'
 
   const result: ItemList = await extract(url, page)
 
@@ -16,51 +17,50 @@ import type { Item, ItemList } from './types'
 
 //한페이지내 item 리스트 반환
 async function getItems(page: Page): Promise<ItemList> {
-  const items = []
-  const pageItemNum = await page.$$eval('.list_item ', data => data.length)
+  const result: Item[] = await page.evaluate(() => {
+    const items: Item[] = []
+    const list = document.querySelectorAll('.item_info')
 
-  // console.log(`아이템 개수: ${pageItemNum}`)
+    list.forEach(el => {
+      const brandName = el.children[0].innerHTML
+      const itemName = el.children[1].children[0].innerHTML
+      const price = el.children[1].children[1].children[0].children[0].innerHTML
 
-  for (let itemNo = 1; itemNo <= pageItemNum; itemNo++) {
-    const root = `div.productContent_list > ruler-list-item:nth-child(${itemNo})`
+      const item: Item = { brandName, itemName, price }
+      items.push(item)
+    })
+    return items
+  })
 
-    //브랜드 이름
-    const brandNameSelector = await page.waitForSelector(`${root} a.info_brand`)
-    const brandName: string = await brandNameSelector?.evaluate(
-      data => data.textContent
-    )
-
-    //아이템 이름
-    const itemNameSelector = await page.waitForSelector(
-      `${root} a.info_desc > strong`
-    )
-    const itemName: string = await itemNameSelector?.evaluate(
-      data => data.textContent
-    )
-
-    //가격
-    const priceSelector = await page.waitForSelector(`${root} span.num`)
-    const price: string = await priceSelector?.evaluate(
-      data => data.textContent
-    )
-
-    const item: Item = { brandName, itemName, price }
-    items.push(item)
-  }
-  return items
+  console.log(`개수: ${result.length}`)
+  return result
 }
 
 async function extract(url: string, page: Page): Promise<ItemList> {
   const result: ItemList = []
 
-  for (let pageNo = 1; pageNo <= 3; pageNo++) {
-    // console.log(`${pageNo}페이지`)
-    await page.goto(
-      `https://search.29cm.co.kr/?keyword=%EC%9A%B0%EC%82%B0&page=${pageNo}`
-    )
-    await page.waitForTimeout(1000)
+  await page.goto(url)
+  let pageNo = 1
+
+  while (true) {
     const items = await getItems(page)
     result.push(...items)
+
+    const check = await page.evaluate(() => {
+      return document.getElementsByClassName('pagination-next disabled').length
+    })
+
+    // console.log(check)
+    if (pageNo > 3 || check === 1) {
+      return result
+    }
+
+    await Promise.all([
+      page.click('span.pagination-next > a > ruler-svg-icon-next'),
+      page.waitForTimeout(1000),
+    ])
+    console.log('다음페이지')
+
+    pageNo += 1
   }
-  return result
 }
