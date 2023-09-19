@@ -11,7 +11,6 @@ import puppeteer from 'puppeteer';
 async function getItems(page) {
     const items = [];
     const pageItemNum = await page.$$eval('.list_item ', data => data.length);
-    console.log(`아이템 개수: ${pageItemNum}`);
     for (let itemNo = 1; itemNo <= pageItemNum; itemNo++) {
         const root = `div.productContent_list > ruler-list-item:nth-child(${itemNo})`;
         const brandNameSelector = await page.waitForSelector(`${root} a.info_brand`);
