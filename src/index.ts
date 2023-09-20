@@ -10,7 +10,7 @@ import type { Item, Result } from './types'
   const result = await extract(url, page)
 
   console.log(JSON.stringify(result))
-  console.log(`아이템 수 ${result.length}`)
+  // console.log(`아이템 수 ${result.length}`)
 
   await browser.close()
 })()
