@@ -1,6 +1,5 @@
-export type Item = {
-  brandName: string
-  itemName: string
+export type Result = {
+  // image: string
+  name: string
   price: string
-}
-export type ItemList = Item[]
+}[]

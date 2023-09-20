@@ -2,49 +2,40 @@ import puppeteer from 'puppeteer';
 (async () => {
     const browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
-    const url = 'https://search.29cm.co.kr/?keyword=%EC%9A%B0%EC%82%B0&page=1';
+    const url = 'https://www.shopcider.com/search/results?q=%ED%82%A4%EB%A7%81&key_word_type=Normal&listSource=product_list-3358;search_word;0';
     const result = await extract(url, page);
     console.log(JSON.stringify(result));
+    console.log(`아이템 수 ${result.length}`);
     await browser.close();
 })();
 async function getItems(page) {
-    const result = await page.evaluate(() => {
-        const items = [];
-        const list = document.querySelectorAll('.item_info');
-        list.forEach(el => {
-            const brandName = el.children[0].textContent;
-            const itemName = el.children[1].children[0].innerHTML;
-            const price = el.children[1].children[1].children[0].children[0].innerHTML;
-            items.push({
-                brandName,
-                itemName,
-                price
-            });
-        });
-        return items;
+    return await page.$$eval('.product-list-item-box', async (listItem) => {
+        return listItem.map(item => ({
+            name: item.querySelector('span.product-item-name').textContent.trim(),
+            price: item
+                .querySelector('div.product-item-main-price ')
+                .textContent.trim(),
+        }));
     });
-    return result;
 }
 async function extract(url, page) {
     const result = [];
     await page.goto(url);
-    let pageNo = 1;
+    let lastHeight = await page.evaluate('document.body.scrollHeight');
     while (true) {
         await sleep(1000);
-        const items = await getItems(page);
-        result.push(...items);
-        const check = await page.evaluate(() => {
-            return document.getElementsByClassName('pagination-next disabled').length;
-        });
-        if (pageNo >= 3 || check === 1) {
-            return result;
+        await page.evaluate('window.scrollTo(0, document.body.scrollHeight)');
+        await sleep(2000);
+        let newHeight = await page.evaluate('document.body.scrollHeight');
+        const itemNum = await page.$$eval('.product-list-item-box', data => data.length);
+        if (newHeight == lastHeight || itemNum >= 100) {
+            break;
         }
-        await Promise.all([
-            page.click('span.pagination-next > a > ruler-svg-icon-next'),
-            sleep(1000)
-        ]);
-        pageNo += 1;
+        lastHeight = newHeight;
     }
+    const items = await getItems(page);
+    result.push(...items);
+    return result;
 }
 async function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
