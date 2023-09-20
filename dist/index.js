@@ -6,7 +6,6 @@ import puppeteer from 'puppeteer';
     const result = await extract(url, page);
     console.log(JSON.stringify(result));
     console.log(`아이템 수 ${result.length}`);
-    await browser.close();
 })();
 async function getItems(page) {
     return await page.$$eval('.product-list-item-box', async (listItem) => {
@@ -35,7 +34,7 @@ async function extract(url, page) {
     }
     const items = await getItems(page);
     result.push(...items);
-    return result;
+    return result.slice(0, 100);
 }
 async function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));

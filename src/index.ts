@@ -12,7 +12,7 @@ import type { Result } from './types'
   console.log(JSON.stringify(result))
   console.log(`아이템 수 ${result.length}`)
 
-  await browser.close()
+  // await browser.close()
 })()
 
 //한페이지내 item 리스트 반환
@@ -33,10 +33,10 @@ async function extract(url: string, page: Page) {
   await page.goto(url)
   let lastHeight = await page.evaluate('document.body.scrollHeight')
   while (true) {
-    await sleep(1000)
-
+    //밑으로 스크롤
     await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
-    await sleep(2000)
+    await sleep(1000)
+    //다음 스크롤 위치 찾기
     let newHeight = await page.evaluate('document.body.scrollHeight')
     const itemNum = await page.$$eval(
       '.product-list-item-box',
@@ -46,12 +46,13 @@ async function extract(url: string, page: Page) {
     if (newHeight == lastHeight || itemNum >= 100) {
       break
     }
+    
     lastHeight = newHeight
   }
   const items = await getItems(page)
   result.push(...items)
 
-  return result
+  return result.slice(0, 100)
 }
 
 async function sleep(ms: number) {
